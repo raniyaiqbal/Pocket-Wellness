@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Pocket Therapist · HRV-SHIELD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════ RESET & VARS ═══════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0d0f14;
+  --bg2:        #13161d;
+  --bg3:        #1a1e28;
+  --border:     rgba(255,255,255,0.07);
+  --border2:    rgba(255,255,255,0.12);
+  --text:       #e8eaf0;
+  --muted:      #6b7280;
+  --accent:     #6ee7b7;       /* teal-green */
+  --accent2:    #818cf8;       /* indigo */
+  --warn:       #fbbf24;
+  --danger:     #f87171;
+  --low:        #6ee7b7;
+  --moderate:   #fbbf24;
+  --high:       #fb923c;
+  --critical:   #f87171;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+  --font-sans:  'DM Sans', system-ui, sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
+  --radius:     14px;
+  --radius-sm:  8px;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* ═══════════════════════════ LAYOUT ═══════════════════════════════ */
+.layout { display: flex; min-height: 100vh; }
+
+/* ═══════════════════════════ SIDEBAR ══════════════════════════════ */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  padding: 0 20px 28px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.sidebar-logo h1 {
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.sidebar-logo .tagline { font-size: 0.7rem; color: var(--muted); margin-top: 3px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+.nav-section { padding: 0 12px 8px; }
+.nav-section-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; padding: 0 8px 6px; }
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.nav-btn:hover { background: var(--bg3); color: var(--text); }
+.nav-btn.active { background: rgba(110,231,183,0.1); color: var(--accent); }
+.nav-btn .icon { font-size: 1rem; width: 20px; text-align: center; }
+
+.demo-badge {
+  margin: auto 20px 20px;
+  padding: 8px 12px;
+  background: rgba(251,191,36,0.08);
+  border: 1px solid rgba(251,191,36,0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  color: var(--warn);
+  text-align: center;
+}
+
+/* ═══════════════════════════ MAIN ══════════════════════════════════ */
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg2);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar-title { font-family: var(--font-serif); font-size: 1.1rem; color: var(--text); }
+.topbar-status { display: flex; align-items: center; gap: 8px; }
+.live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(110,231,183,0.4); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(110,231,183,0); }
+}
+.status-text { font-size: 0.75rem; color: var(--muted); font-family: var(--font-mono); }
+
+.content { padding: 28px; flex: 1; }
+
+/* ═══════════════════════════ CARDS ═════════════════════════════════ */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+.card-title {
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+.card-value {
+  font-family: var(--font-serif);
+  font-size: 2.4rem;
+  line-height: 1;
+  color: var(--text);
+}
+.card-sub { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+/* ═══════════════════════════ DASHBOARD ════════════════════════════ */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width:1100px) { .dash-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width:680px)  { .dash-grid { grid-template-columns: 1fr; } }
+
+.dash-row { display: grid; grid-template-columns: 1fr 1.6fr; gap: 16px; margin-bottom: 20px; }
+@media (max-width:900px) { .dash-row { grid-template-columns: 1fr; } }
+
+/* ═══════════════════════════ GAUGE ═════════════════════════════════ */
+.gauge-card { display: flex; flex-direction: column; align-items: center; padding: 28px 22px; }
+.gauge-wrap { position: relative; width: 180px; height: 100px; margin-bottom: 16px; }
+.gauge-svg { width: 100%; height: 100%; }
+.gauge-center {
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+.gauge-score { font-family: var(--font-serif); font-size: 2.6rem; line-height: 1; }
+.gauge-max   { font-size: 0.72rem; color: var(--muted); }
+.gauge-label-badge {
+  padding: 5px 16px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+.label-low      { background: rgba(110,231,183,0.12); color: var(--low); }
+.label-moderate { background: rgba(251,191,36,0.12);  color: var(--moderate); }
+.label-high     { background: rgba(251,146,60,0.12);  color: var(--high); }
+.label-critical { background: rgba(248,113,113,0.12); color: var(--critical); }
+
+/* ═══════════════════════════ XAI PANEL ════════════════════════════ */
+.xai-bars { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+.xai-row { display: flex; flex-direction: column; gap: 4px; }
+.xai-label-row { display: flex; justify-content: space-between; font-size: 0.76rem; }
+.xai-feature-name { color: var(--text); }
+.xai-pct { color: var(--muted); font-family: var(--font-mono); }
+.xai-bar-track { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.xai-bar-fill  { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+/* ═══════════════════════════ TREND CHART ══════════════════════════ */
+.chart-container { position: relative; height: 200px; }
+
+/* ═══════════════════════════ PAGES ═════════════════════════════════ */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ═══════════════════════════ CHATBOT ═══════════════════════════════ */
+.chat-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; height: calc(100vh - 160px); }
+@media (max-width: 900px) { .chat-layout { grid-template-columns: 1fr; } }
+
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.chat-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.chat-header-info h3 { font-family: var(--font-serif); font-size: 1rem; }
+.chat-header-info p  { font-size: 0.72rem; color: var(--muted); }
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-track { background: transparent; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.msg {
+  display: flex;
+  gap: 10px;
+  animation: fadeUp 0.3s ease;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.msg.user { flex-direction: row-reverse; }
+.msg-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem;
+}
+.msg.bot  .msg-avatar { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+.msg.user .msg-avatar { background: var(--bg3); border: 1px solid var(--border2); }
+.msg-bubble {
+  max-width: 72%;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.msg.bot  .msg-bubble { background: var(--bg3); border: 1px solid var(--border); border-top-left-radius: 4px; }
+.msg.user .msg-bubble { background: rgba(110,231,183,0.1); border: 1px solid rgba(110,231,183,0.2); border-top-right-radius: 4px; }
+.msg-time { font-size: 0.65rem; color: var(--muted); margin-top: 4px; font-family: var(--font-mono); }
+
+.typing-indicator { display: none; }
+.typing-indicator.show { display: flex; }
+.typing-dots { display: flex; gap: 4px; padding: 12px 16px; }
+.typing-dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: blink 1.2s infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,80%,100% { opacity: 0.3; } 40% { opacity: 1; } }
+
+.chat-input-area {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.chat-input {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  padding: 10px 14px;
+  resize: none;
+  outline: none;
+  min-height: 44px;
+  max-height: 120px;
+  line-height: 1.5;
+  transition: border-color 0.2s;
+}
+.chat-input:focus { border-color: var(--accent); }
+.chat-input::placeholder { color: var(--muted); }
+
+.send-btn {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--accent);
+  color: #0d0f14;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.send-btn:hover { background: #34d399; transform: scale(1.05); }
+.send-btn:active { transform: scale(0.97); }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* Quick replies */
+.quick-replies { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 20px 0; }
+.qr-btn {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all 0.15s;
+}
+.qr-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(110,231,183,0.05); }
+
+/* Chat sidebar */
+.chat-sidebar-panel { display: flex; flex-direction: column; gap: 16px; }
+.sensor-mini-card { padding: 16px 18px; }
+.sensor-mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.sensor-mini-item { background: var(--bg3); border-radius: var(--radius-sm); padding: 10px; }
+.sensor-mini-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.sensor-mini-val { font-family: var(--font-mono); font-size: 1rem; color: var(--text); margin-top: 2px; }
+.sensor-mini-unit { font-size: 0.65rem; color: var(--muted); }
+
+.mood-card { padding: 16px 18px; }
+.mood-btns { display: flex; justify-content: space-between; margin-top: 10px; }
+.mood-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 46px; text-align: center;
+}
+.mood-btn:hover { border-color: var(--accent); background: rgba(110,231,183,0.05); transform: scale(1.1); }
+.mood-btn.selected { border-color: var(--accent); background: rgba(110,231,183,0.1); }
+
+/* ═══════════════════════════ COPING TOOLS ══════════════════════════ */
+.tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 900px) { .tools-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 580px)  { .tools-grid { grid-template-columns: 1fr; } }
+
+.tool-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.tool-card:hover { border-color: var(--accent); background: rgba(110,231,183,0.03); transform: translateY(-2px); }
+.tool-icon { font-size: 1.8rem; }
+.tool-name { font-weight: 600; font-size: 0.9rem; }
+.tool-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.tool-duration { font-size: 0.7rem; color: var(--accent); font-family: var(--font-mono); margin-top: auto; }
+
+/* ═══════════════════════════ BREATHING EXERCISE ═══════════════════ */
+.exercise-modal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+.exercise-modal.open { display: flex; }
+.exercise-box {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 40px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  position: relative;
+}
+.ex-close {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; color: var(--muted);
+  font-size: 1.2rem; cursor: pointer;
+}
+.ex-close:hover { color: var(--text); }
+.ex-title { font-family: var(--font-serif); font-size: 1.5rem; margin-bottom: 6px; }
+.ex-desc { font-size: 0.83rem; color: var(--muted); margin-bottom: 32px; }
+
+/* Animated breathing circle */
+.breath-circle-wrap { position: relative; width: 200px; height: 200px; margin: 0 auto 28px; }
+.breath-circle {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(110,231,183,0.25) 0%, rgba(110,231,183,0.05) 70%);
+  border: 2px solid rgba(110,231,183,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-serif); font-size: 1.1rem;
+  color: var(--accent);
+  transition: transform 0.5s ease;
+}
+.breath-ring {
+  position: absolute; inset: -20px;
+  border-radius: 50%;
+  border: 1px solid rgba(110,231,183,0.15);
+  animation: breathe-ring 4s infinite ease-in-out;
+}
+@keyframes breathe-ring {
+  0%,100% { transform: scale(0.9); opacity: 0.4; }
+  50%      { transform: scale(1.1); opacity: 0.1; }
+}
+.breath-phase { font-size: 1rem; color: var(--accent); margin-bottom: 4px; font-weight: 600; }
+.breath-count { font-family: var(--font-mono); font-size: 2.5rem; color: var(--text); margin-bottom: 24px; }
+.ex-progress { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+.ex-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border2); transition: background 0.3s; }
+.ex-dot.done { background: var(--accent); }
+
+.ex-btn {
+  padding: 12px 32px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--accent);
+  color: #0d0f14;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ex-btn:hover { background: #34d399; }
+.ex-btn.secondary {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  margin-left: 10px;
+}
+.ex-btn.secondary:hover { border-color: var(--text); color: var(--text); background: none; }
+
+/* ═══════════════════════════ CRISIS ════════════════════════════════ */
+.crisis-banner {
+  display: none;
+  background: rgba(248,113,113,0.08);
+  border: 1px solid rgba(248,113,113,0.3);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  gap: 12px;
+  align-items: flex-start;
+}
+.crisis-banner.show { display: flex; }
+.crisis-banner-icon { font-size: 1.4rem; flex-shrink: 0; }
+.crisis-banner-body h4 { color: var(--danger); font-size: 0.9rem; margin-bottom: 4px; }
+.crisis-banner-body p { font-size: 0.8rem; color: #fca5a5; line-height: 1.5; }
+.crisis-links { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.crisis-link {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(248,113,113,0.12);
+  border: 1px solid rgba(248,113,113,0.25);
+  color: var(--danger);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s;
+  font-family: var(--font-mono);
+}
+.crisis-link:hover { background: rgba(248,113,113,0.2); }
+
+/* ═══════════════════════════ WEEKLY CHART ══════════════════════════ */
+.weekly-chart-container { height: 180px; }
+
+/* ═══════════════════════════ SETTINGS / PROFILE ════════════════════ */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .settings-grid { grid-template-columns: 1fr; } }
+.toggle-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label { color: var(--text); }
+.toggle-sub { font-size: 0.72rem; color: var(--muted); }
+.toggle {
+  position: relative; width: 40px; height: 22px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 11px; cursor: pointer; flex-shrink: 0;
+  transition: background 0.2s;
+}
+.toggle.on { background: var(--accent); border-color: var(--accent); }
+.toggle::after {
+  content: '';
+  position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  border-radius: 50%; background: white;
+  transition: transform 0.2s;
+}
+.toggle.on::after { transform: translateX(18px); }
+
+/* ═══════════════════════════ DISORDER MONITOR ══════════════════════ */
+.disorder-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+@media (max-width: 800px) { .disorder-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 500px)  { .disorder-grid { grid-template-columns: 1fr; } }
+
+.disorder-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.disorder-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.disorder-name { font-size: 0.85rem; font-weight: 600; }
+.disorder-emoji { font-size: 1.5rem; }
+.disorder-score-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.disorder-score { font-family: var(--font-mono); font-size: 1.2rem; }
+.disorder-level { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.disorder-bar-track { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.disorder-bar-fill  { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+
+/* ═══════════════════════════ MISC UTILS ════════════════════════════ */
+.section-header { margin-bottom: 20px; }
+.section-header h2 { font-family: var(--font-serif); font-size: 1.4rem; margin-bottom: 4px; }
+.section-header p  { font-size: 0.82rem; color: var(--muted); }
+.mt-16 { margin-top: 16px; }
+.flex-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.btn {
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  background: none;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover { background: var(--bg3); border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); color: #0d0f14; border-color: var(--accent); font-weight: 600; }
+.btn.primary:hover { background: #34d399; }
+
+.empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+.empty-state p { font-size: 0.85rem; margin-top: 8px; }
+
+/* ═══════════════════════════ SCROLLBAR ════════════════════════════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ─── Crisis Banner (shown when score ≥ 75 consistently) ─── -->
+<div class="exercise-modal" id="exerciseModal">
+  <div class="exercise-box">
+    <button class="ex-close" onclick="closeExercise()">✕</button>
+    <div class="ex-title" id="exTitle">Box Breathing</div>
+    <div class="ex-desc" id="exDesc">Regulates your autonomic nervous system in 4 minutes</div>
+    <div class="breath-circle-wrap">
+      <div class="breath-ring"></div>
+      <div class="breath-circle" id="breathCircle">
+        <span id="breathInner">Ready</span>
+      </div>
+    </div>
+    <div class="breath-phase" id="breathPhase">Press Start</div>
+    <div class="breath-count" id="breathCount">—</div>
+    <div class="ex-progress" id="exProgress"></div>
+    <div>
+      <button class="ex-btn" id="exStartBtn" onclick="startExercise()">Start</button>
+      <button class="ex-btn secondary" onclick="closeExercise()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>Pocket Therapist</h1>
+      <div class="tagline">HRV-SHIELD · v2.0</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Monitor</div>
+      <button class="nav-btn active" onclick="showPage('dashboard', this)">
+        <span class="icon">📊</span> Dashboard
+      </button>
+      <button class="nav-btn" onclick="showPage('disorders', this)">
+        <span class="icon">🧠</span> Disorders
+      </button>
+      <button class="nav-btn" onclick="showPage('trends', this)">
+        <span class="icon">📈</span> Trends
+      </button>
+    </div>
+
+    <div class="nav-section" style="margin-top:8px">
+      <div class="nav-section-label">Support</div>
+      <button class="nav-btn" onclick="showPage('therapist', this)">
+        <span class="icon">💬</span> AI Therapist
+      </button>
+      <button class="nav-btn" onclick="showPage('coping', this)">
+        <span class="icon">🌿</span> Coping Tools
+      </button>
+      <button class="nav-btn" onclick="showPage('crisis', this)">
+        <span class="icon">🆘</span> Crisis Support
+      </button>
+    </div>
+
+    <div class="nav-section" style="margin-top:8px">
+      <div class="nav-section-label">Settings</div>
+      <button class="nav-btn" onclick="showPage('profile', this)">
+        <span class="icon">⚙️</span> Profile & Privacy
+      </button>
+    </div>
+
+    <div class="demo-badge" id="demoBadge">⚡ Demo Mode<br>Simulated sensors</div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="pageTitle">Dashboard</div>
+      <div class="topbar-status">
+        <div class="live-dot"></div>
+        <div class="status-text" id="statusText">Connecting…</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══════════════ DASHBOARD ══════════════ -->
+      <div class="page active" id="page-dashboard">
+        <div class="crisis-banner" id="crisisBanner">
+          <div class="crisis-banner-icon">🚨</div>
+          <div class="crisis-banner-body">
+            <h4>High Stress Detected</h4>
+            <p>Your physiological indicators show critical stress levels. Please consider reaching out for support.</p>
+            <div class="crisis-links">
+              <a class="crisis-link" href="tel:8004673">📞 800 4673</a>
+              <a class="crisis-link" href="tel:+97145219999">📞 Lifeline ME</a>
+              <button class="crisis-link" style="cursor:pointer;border:none;" onclick="showPage('therapist', document.querySelector('.nav-btn:nth-child(4)'))">Talk to AI</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric cards -->
+        <div class="dash-grid">
+          <div class="card gauge-card" style="grid-column: span 1">
+            <div class="card-title">Stress Score</div>
+            <div class="gauge-wrap">
+              <svg class="gauge-svg" viewBox="0 0 180 100" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 20 90 A 70 70 0 0 1 160 90" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10" stroke-linecap="round"/>
+                <path id="gaugePath" d="M 20 90 A 70 70 0 0 1 160 90" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round"
+                      stroke-dasharray="220" stroke-dashoffset="220"/>
+              </svg>
+              <div class="gauge-center">
+                <div class="gauge-score" id="gaugeScore">—</div>
+                <div class="gauge-max">/100</div>
+              </div>
+            </div>
+            <div class="gauge-label-badge label-low" id="gaugeLabelBadge">—</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Heart Rate</div>
+            <div class="card-value" id="cardHR">—</div>
+            <div class="card-sub">bpm</div>
+            <div class="mt-16">
+              <canvas id="hrSparkline" height="40"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">HRV · RMSSD</div>
+            <div class="card-value" id="cardHRV">—</div>
+            <div class="card-sub">ms — higher = calmer</div>
+            <div class="mt-16">
+              <canvas id="hrvSparkline" height="40"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Skin EDA / GSR</div>
+            <div class="card-value" id="cardEDA">—</div>
+            <div class="card-sub">conductance units</div>
+            <div class="mt-16">
+              <canvas id="edaSparkline" height="40"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trend + XAI -->
+        <div class="dash-row">
+          <div class="card">
+            <div class="card-title">Stress Trend · Last 60s</div>
+            <div class="chart-container">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">XAI · Feature Contributions</div>
+            <div style="font-size:0.75rem; color:var(--muted); margin-bottom:12px;">
+              Primary driver: <span id="xaiPrimary" style="color:var(--accent); font-weight:600">—</span>
+            </div>
+            <div class="xai-bars" id="xaiBars"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ DISORDERS ══════════════ -->
+      <div class="page" id="page-disorders">
+        <div class="section-header">
+          <h2>Disorder Monitor</h2>
+          <p>Composite biomarker scores — not diagnostic. Consult a clinician for assessment.</p>
+        </div>
+        <div class="disorder-grid" id="disorderGrid"></div>
+        <div class="card mt-16">
+          <div class="card-title">Interpretation</div>
+          <p style="font-size:0.82rem; color:var(--muted); line-height:1.7;">
+            These indicators are derived from your HRV, EDA, and heart rate patterns using published biomarker research.
+            They reflect physiological correlates of psychological states — not clinical diagnoses.
+            If multiple indicators are elevated, consider speaking with a mental health professional.
+          </p>
+        </div>
+      </div>
+
+      <!-- ══════════════ TRENDS ══════════════ -->
+      <div class="page" id="page-trends">
+        <div class="section-header">
+          <h2>Longitudinal Trends</h2>
+          <p>7-day stress pattern overview</p>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">Weekly Stress Average</div>
+          <div class="weekly-chart-container">
+            <canvas id="weeklyChart"></canvas>
+          </div>
+        </div>
+        <div class="dash-grid">
+          <div class="card">
+            <div class="card-title">7-Day Avg Score</div>
+            <div class="card-value" id="trendAvg">—</div>
+            <div class="card-sub">stress index</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Best Day</div>
+            <div class="card-value" id="trendBest" style="font-size:1.4rem">—</div>
+            <div class="card-sub">lowest stress</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Worst Day</div>
+            <div class="card-value" id="trendWorst" style="font-size:1.4rem">—</div>
+            <div class="card-sub">highest stress</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Trend</div>
+            <div class="card-value" id="trendDirection" style="font-size:1.8rem">—</div>
+            <div class="card-sub" id="trendDirectionSub">vs last 3 days</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ AI THERAPIST ══════════════ -->
+      <div class="page" id="page-therapist">
+        <div class="chat-layout">
+          <div class="chat-panel">
+            <div class="chat-header">
+              <div class="chat-avatar">🤖</div>
+              <div class="chat-header-info">
+                <h3>Pocket Therapist</h3>
+                <p id="chatStatusLine">Sensor-aware · Evidence-based support</p>
+              </div>
+            </div>
+
+            <div class="quick-replies" id="quickReplies">
+              <button class="qr-btn" onclick="sendQuick('I\'m feeling stressed right now')">😰 Feeling stressed</button>
+              <button class="qr-btn" onclick="sendQuick('Help me with a breathing exercise')">🌬️ Breathing help</button>
+              <button class="qr-btn" onclick="sendQuick('I can\'t sleep')">😴 Can\'t sleep</button>
+              <button class="qr-btn" onclick="sendQuick('I feel anxious')">💭 Anxiety</button>
+              <button class="qr-btn" onclick="sendQuick('What do my sensor readings mean?')">📊 Explain readings</button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+              <!-- Welcome message injected by JS -->
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+              <div class="msg bot">
+                <div class="msg-avatar">🤖</div>
+                <div class="msg-bubble">
+                  <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="chat-input-area">
+              <textarea class="chat-input" id="chatInput" placeholder="Type a message…" rows="1"
+                onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
+              <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+            </div>
+          </div>
+
+          <!-- Chat right sidebar -->
+          <div class="chat-sidebar-panel">
+            <div class="card sensor-mini-card">
+              <div class="card-title">Live Readings</div>
+              <div class="sensor-mini-grid">
+                <div class="sensor-mini-item">
+                  <div class="sensor-mini-label">Stress</div>
+                  <div class="sensor-mini-val" id="chatScore">—</div>
+                  <div class="sensor-mini-unit">/ 100</div>
+                </div>
+                <div class="sensor-mini-item">
+                  <div class="sensor-mini-label">Heart Rate</div>
+                  <div class="sensor-mini-val" id="chatHR">—</div>
+                  <div class="sensor-mini-unit">bpm</div>
+                </div>
+                <div class="sensor-mini-item">
+                  <div class="sensor-mini-label">HRV</div>
+                  <div class="sensor-mini-val" id="chatHRV">—</div>
+                  <div class="sensor-mini-unit">ms</div>
+                </div>
+                <div class="sensor-mini-item">
+                  <div class="sensor-mini-label">EDA</div>
+                  <div class="sensor-mini-val" id="chatEDA">—</div>
+                  <div class="sensor-mini-unit">cu</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card mood-card">
+              <div class="card-title">How are you feeling?</div>
+              <div class="mood-btns">
+                <button class="mood-btn" onclick="selectMood(this, '😊', 'great')">😊</button>
+                <button class="mood-btn" onclick="selectMood(this, '😐', 'okay')">😐</button>
+                <button class="mood-btn" onclick="selectMood(this, '😔', 'low')">😔</button>
+                <button class="mood-btn" onclick="selectMood(this, '😰', 'anxious')">😰</button>
+                <button class="mood-btn" onclick="selectMood(this, '😤', 'angry')">😤</button>
+              </div>
+            </div>
+
+            <div class="card" style="padding:16px 18px">
+              <div class="card-title">Crisis Resources</div>
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px">
+                <a href="tel:8004673" style="text-decoration:none; display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--bg3); border-radius:var(--radius-sm); font-size:0.78rem; color:var(--text)">
+                  📞 <span><strong>UAE Helpline</strong><br><span style="color:var(--muted); font-size:0.7rem">800 4673 · 24/7 Free</span></span>
+                </a>
+                <a href="tel:+97145219999" style="text-decoration:none; display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--bg3); border-radius:var(--radius-sm); font-size:0.78rem; color:var(--text)">
+                  📞 <span><strong>Lifeline ME</strong><br><span style="color:var(--muted); font-size:0.7rem">+971 4 521 9999 · 24/7</span></span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ COPING TOOLS ══════════════ -->
+      <div class="page" id="page-coping">
+        <div class="section-header">
+          <h2>Coping Tools</h2>
+          <p>Evidence-based techniques for stress, anxiety, and emotional regulation</p>
+        </div>
+        <div class="tools-grid">
+          <div class="tool-card" onclick="openExercise('box')">
+            <div class="tool-icon">📦</div>
+            <div class="tool-name">Box Breathing</div>
+            <div class="tool-desc">4-4-4-4 technique. Balances the autonomic nervous system and reduces cortisol.</div>
+            <div class="tool-duration">⏱ 4 minutes · 4 cycles</div>
+          </div>
+          <div class="tool-card" onclick="openExercise('478')">
+            <div class="tool-icon">🌬️</div>
+            <div class="tool-name">4-7-8 Breathing</div>
+            <div class="tool-desc">Activates the parasympathetic system. Excellent for acute anxiety and sleep onset.</div>
+            <div class="tool-duration">⏱ 3 minutes · 4 cycles</div>
+          </div>
+          <div class="tool-card" onclick="openExercise('54321')">
+            <div class="tool-icon">🌿</div>
+            <div class="tool-name">5-4-3-2-1 Grounding</div>
+            <div class="tool-desc">Sensory grounding technique to interrupt panic and anxiety spirals.</div>
+            <div class="tool-duration">⏱ 5 minutes · guided</div>
+          </div>
+          <div class="tool-card" onclick="openExercise('pmr')">
+            <div class="tool-icon">💆</div>
+            <div class="tool-name">PMR · Muscle Relaxation</div>
+            <div class="tool-desc">Progressive Muscle Relaxation reduces physiological tension systematically.</div>
+            <div class="tool-duration">⏱ 10 minutes · 8 groups</div>
+          </div>
+          <div class="tool-card" onclick="openExercise('diaphragm')">
+            <div class="tool-icon">🫁</div>
+            <div class="tool-name">Diaphragmatic Breathing</div>
+            <div class="tool-desc">Deep belly breathing for sustained HRV improvement and stress reduction.</div>
+            <div class="tool-duration">⏱ 5 minutes</div>
+          </div>
+          <div class="tool-card" onclick="openExercise('sleep')">
+            <div class="tool-icon">🌙</div>
+            <div class="tool-name">Sleep Hygiene Protocol</div>
+            <div class="tool-desc">CBT-I based wind-down routine to improve sleep onset and quality.</div>
+            <div class="tool-duration">⏱ 20-min wind-down</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ CRISIS SUPPORT ══════════════ -->
+      <div class="page" id="page-crisis">
+        <div class="section-header">
+          <h2>Crisis Support</h2>
+          <p>You are not alone. Help is available right now.</p>
+        </div>
+
+        <div class="card" style="margin-bottom:16px; border-color:rgba(248,113,113,0.25); background:rgba(248,113,113,0.04)">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px">
+            <span style="font-size:2rem">🆘</span>
+            <div>
+              <h3 style="font-family:var(--font-serif); font-size:1.1rem; margin-bottom:4px">If you are in crisis or danger</h3>
+              <p style="font-size:0.8rem; color:var(--muted)">Please reach out immediately. These services are free, confidential, and available 24/7.</p>
+            </div>
+          </div>
+          <div style="display:grid; gap:10px">
+            <a href="tel:999" style="text-decoration:none">
+              <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.3); border-radius:var(--radius-sm); padding:14px 18px">
+                <div>
+                  <div style="font-weight:600; font-size:0.9rem; color:#fca5a5">🚨 Emergency Services</div>
+                  <div style="font-size:0.75rem; color:var(--muted)">Immediate physical danger</div>
+                </div>
+                <div style="font-family:var(--font-mono); font-size:1.4rem; font-weight:700; color:var(--danger)">999</div>
+              </div>
+            </a>
+            <a href="tel:8004673" style="text-decoration:none">
+              <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 18px">
+                <div>
+                  <div style="font-weight:600; font-size:0.9rem">UAE Mental Health Helpline</div>
+                  <div style="font-size:0.75rem; color:var(--muted)">24/7 · Free · Confidential · Arabic & English</div>
+                </div>
+                <div style="font-family:var(--font-mono); font-size:1.2rem; color:var(--accent)">800 4673</div>
+              </div>
+            </a>
+            <a href="tel:+97145219999" style="text-decoration:none">
+              <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 18px">
+                <div>
+                  <div style="font-weight:600; font-size:0.9rem">Lifeline Middle East</div>
+                  <div style="font-size:0.75rem; color:var(--muted)">24/7 · English & Arabic · Crisis counselling</div>
+                </div>
+                <div style="font-family:var(--font-mono); font-size:1.2rem; color:var(--accent)">+971 4 521 9999</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Safety Check-In</div>
+          <p style="font-size:0.83rem; color:var(--muted); margin-bottom:16px">Answer honestly — this helps us provide the right support.</p>
+          <div style="display:flex; flex-direction:column; gap:14px" id="safetyForm">
+            <div>
+              <div style="font-size:0.85rem; margin-bottom:8px">How are you feeling right now?</div>
+              <div class="flex-row">
+                <button class="btn" onclick="safetyAnswer('q1', 'safe', this)">Safe</button>
+                <button class="btn" onclick="safetyAnswer('q1', 'overwhelmed', this)">Overwhelmed</button>
+                <button class="btn" onclick="safetyAnswer('q1', 'crisis', this)">In Crisis</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:0.85rem; margin-bottom:8px">Are you having thoughts of harming yourself?</div>
+              <div class="flex-row">
+                <button class="btn" onclick="safetyAnswer('q2', 'no', this)">No</button>
+                <button class="btn" onclick="safetyAnswer('q2', 'unsure', this)">Unsure</button>
+                <button class="btn" onclick="safetyAnswer('q2', 'unsafe', this)">Yes</button>
+              </div>
+            </div>
+            <div id="safetyResult" style="display:none; padding:14px; background:var(--bg3); border-radius:var(--radius-sm); font-size:0.83rem"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════ PROFILE ══════════════ -->
+      <div class="page" id="page-profile">
+        <div class="section-header">
+          <h2>Profile & Privacy</h2>
+          <p>UAE PDPL compliant · AES-256 encrypted · Data stays on your device in demo mode</p>
+        </div>
+        <div class="settings-grid">
+          <div class="card">
+            <div class="card-title">Data & Privacy</div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Store session data</div><div class="toggle-sub">Keep readings for trend analysis</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Anonymous analytics</div><div class="toggle-sub">Help improve the system</div></div>
+              <div class="toggle" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Crisis auto-escalation</div><div class="toggle-sub">Show resources when score ≥ 75</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Chatbot API access</div><div class="toggle-sub">Send sensor context to AI</div></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Sensor Configuration</div>
+            <div style="font-size:0.82rem; color:var(--muted); margin-bottom:14px">Connect your ESP32/Arduino hardware</div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Demo Mode</div><div class="toggle-sub">Use simulated sensor data</div></div>
+              <div class="toggle on" id="demoToggle" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div style="margin-top:14px">
+              <div style="font-size:0.78rem; color:var(--muted); margin-bottom:6px">Serial Port</div>
+              <input type="text" value="/dev/ttyUSB0" style="width:100%; background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); padding:8px 12px; font-family:var(--font-mono); font-size:0.82rem; outline:none"/>
+            </div>
+            <div style="margin-top:10px">
+              <div style="font-size:0.78rem; color:var(--muted); margin-bottom:6px">Anthropic API Key</div>
+              <input type="password" placeholder="sk-ant-…" style="width:100%; background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); padding:8px 12px; font-family:var(--font-mono); font-size:0.82rem; outline:none"/>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Ethics & Compliance</div>
+            <p style="font-size:0.78rem; color:var(--muted); line-height:1.7">
+              ⚕️ Non-diagnostic — not a replacement for professional care<br>
+              🔒 UAE PDPL (Federal Decree-Law No. 45/2021)<br>
+              🏛️ UOWD Human Research Ethics Committee<br>
+              🔐 AES-256 encryption · TLS 1.3<br>
+              🌍 Data jurisdiction: UAE (AWS me-central-1)
+            </p>
+            <div class="mt-16 flex-row">
+              <button class="btn" style="font-size:0.75rem">Export My Data</button>
+              <button class="btn" style="font-size:0.75rem; color:var(--danger); border-color:rgba(248,113,113,0.3)" onclick="if(confirm('Delete all local data?')) alert('Data cleared.')">Delete All Data</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">About</div>
+            <p style="font-size:0.78rem; color:var(--muted); line-height:1.8">
+              <strong style="color:var(--text)">HRV-SHIELD v2.0</strong><br>
+              Pocket Therapist Module<br><br>
+              University of Wollongong in Dubai<br>
+              Faculty of Engineering & Information Sciences<br><br>
+              Backend: Flask + Anthropic API<br>
+              Sensors: ESP32 · Pulse · Grove GSR · LM35<br>
+              Classifier: Weighted Stress Index + XAI
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </main>
+</div>
+
+<!-- ════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+// ── state ──────────────────────────────────────────────────────────
+let liveData      = {};
+let historyData   = [];
+let chatHistory   = [];   // [{role, content}]
+let currentMood   = null;
+let safetyAnswers = {};
+let exerciseType  = null;
+let exerciseTimer = null;
+let weeklyChart   = null;
+let trendChart    = null;
+const sparklines  = {};
+
+// ── colours by label ───────────────────────────────────────────────
+const LABEL_COLOR = { low: '#6ee7b7', moderate: '#fbbf24', high: '#fb923c', critical: '#f87171' };
+
+// ── NAV ─────────────────────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  const titles = { dashboard:'Dashboard', disorders:'Disorder Monitor', trends:'Longitudinal Trends',
+                   therapist:'AI Therapist', coping:'Coping Tools', crisis:'Crisis Support', profile:'Profile & Privacy' };
+  document.getElementById('pageTitle').textContent = titles[id] || id;
+  if (id === 'trends') renderWeekly();
+}
+
+// ── LIVE DATA POLL ──────────────────────────────────────────────────
+async function fetchLive() {
+  try {
+    const r = await fetch('/api/live');
+    if (!r.ok) return;
+    liveData = await r.json();
+    updateDashboard();
+  } catch(e) { /* silently skip if backend not running */ }
+}
+
+async function fetchHistory() {
+  try {
+    const r = await fetch('/api/history?n=60');
+    if (!r.ok) return;
+    historyData = await r.json();
+    updateTrendChart();
+    updateSparklines();
+  } catch(e) {}
+}
+
+async function fetchStatus() {
+  try {
+    const r = await fetch('/api/status');
+    if (!r.ok) return;
+    const s = await r.json();
+    const dot = document.querySelector('.live-dot');
+    if (s.demo_mode) {
+      dot.style.background = 'var(--warn)';
+      document.getElementById('demoBadge').style.display = 'block';
+    } else {
+      dot.style.background = 'var(--accent)';
+      document.getElementById('demoBadge').style.display = 'none';
+    }
+    document.getElementById('statusText').textContent =
+      (s.demo_mode ? 'Demo · ' : 'Live · ') + s.buffer_size + ' readings';
+  } catch(e) {
+    document.getElementById('statusText').textContent = 'Offline';
+  }
+}
+
+// ── DASHBOARD UPDATE ────────────────────────────────────────────────
+function updateDashboard() {
+  if (!liveData.score) return;
+  const { score, label, hr, rmssd, eda, xai_all } = liveData;
+  const color = LABEL_COLOR[label] || '#6ee7b7';
+
+  // gauge
+  const pct = score / 100;
+  const totalLen = 220;
+  document.getElementById('gaugePath').setAttribute('stroke-dashoffset', totalLen - pct * totalLen);
+  document.getElementById('gaugePath').setAttribute('stroke', color);
+  document.getElementById('gaugeScore').textContent = score;
+  document.getElementById('gaugeScore').style.color = color;
+  const badge = document.getElementById('gaugeLabelBadge');
+  badge.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+  badge.className = `gauge-label-badge label-${label}`;
+
+  document.getElementById('cardHR').textContent  = Math.round(hr);
+  document.getElementById('cardHRV').textContent = rmssd;
+  document.getElementById('cardEDA').textContent = Math.round(eda);
+
+  // chat sidebar
+  document.getElementById('chatScore').textContent = score;
+  document.getElementById('chatHR').textContent    = Math.round(hr);
+  document.getElementById('chatHRV').textContent   = rmssd;
+  document.getElementById('chatEDA').textContent   = Math.round(eda);
+
+  // crisis banner
+  const banner = document.getElementById('crisisBanner');
+  if (score >= 75) banner.classList.add('show'); else banner.classList.remove('show');
+
+  // XAI bars
+  if (xai_all) {
+    document.getElementById('xaiPrimary').textContent = liveData.xai_feature;
+    const bars = document.getElementById('xaiBars');
+    bars.innerHTML = '';
+    const colors = ['var(--accent)', 'var(--accent2)', 'var(--warn)', 'var(--muted)'];
+    Object.entries(xai_all).forEach(([name, pct], i) => {
+      bars.innerHTML += `
+        <div class="xai-row">
+          <div class="xai-label-row">
+            <span class="xai-feature-name">${name}</span>
+            <span class="xai-pct">${pct}%</span>
+          </div>
+          <div class="xai-bar-track">
+            <div class="xai-bar-fill" style="width:${pct}%; background:${colors[i % colors.length]}"></div>
+          </div>
+        </div>`;
+    });
+  }
+
+  // disorder monitor
+  updateDisorders(score, rmssd, hr, eda);
+}
+
+// ── SPARKLINES ──────────────────────────────────────────────────────
+function makeSparkline(id, field, color) {
+  const ctx = document.getElementById(id).getContext('2d');
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ data: [], borderColor: color, borderWidth: 1.5,
+      fill: true, backgroundColor: color + '18', tension: 0.4, pointRadius: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } },
+      animation: false,
+    }
+  });
+  sparklines[field] = chart;
+}
+
+function updateSparklines() {
+  const fields = { hr: 'hr', rmssd: 'rmssd', eda: 'eda' };
+  const ids    = { hr: 'hrSparkline', rmssd: 'hrvSparkline', eda: 'edaSparkline' };
+  const colors = { hr: '#f87171', rmssd: '#6ee7b7', eda: '#818cf8' };
+
+  Object.keys(fields).forEach(f => {
+    if (!sparklines[f]) makeSparkline(ids[f], f, colors[f]);
+    const vals = historyData.slice(-30).map(r => r[f]);
+    sparklines[f].data.labels = vals.map((_, i) => i);
+    sparklines[f].data.datasets[0].data = vals;
+    sparklines[f].update('none');
+  });
+}
+
+// ── TREND CHART ──────────────────────────────────────────────────────
+function updateTrendChart() {
+  if (!historyData.length) return;
+  const last60 = historyData.slice(-60);
+  const scores = last60.map(r => r.score);
+  const labels = last60.map((r, i) => i % 10 === 0 ? '-' + (60 - i) + 's' : '');
+
+  if (!trendChart) {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    trendChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: scores, borderColor: '#6ee7b7', borderWidth: 2,
+          fill: true, backgroundColor: 'rgba(110,231,183,0.08)', tension: 0.4,
+          pointRadius: 0, pointHoverRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          mode: 'index', intersect: false,
+          backgroundColor: '#1a1e28', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+          titleColor: '#6b7280', bodyColor: '#e8eaf0', padding: 10,
+          callbacks: { title: () => 'Stress Score', label: ctx => ctx.parsed.y + ' / 100' }
+        }},
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 10 } } },
+          y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.04)' },
+               ticks: { color: '#6b7280', font: { size: 10 }, stepSize: 25 } }
+        },
+        animation: { duration: 300 },
+      }
+    });
+  } else {
+    trendChart.data.labels = labels;
+    trendChart.data.datasets[0].data = scores;
+    trendChart.update('none');
+  }
+}
+
+// ── WEEKLY TRENDS ────────────────────────────────────────────────────
+async function renderWeekly() {
+  try {
+    const r = await fetch('/api/weekly');
+    if (!r.ok) return;
+    const data = await r.json();
+    const labels = data.map(d => new Date(d.date + 'T00:00:00').toLocaleDateString('en-GB', {weekday:'short', day:'numeric'}));
+    const scores = data.map(d => d.avg_score);
+    const barColors = scores.map(s => s < 35 ? '#6ee7b7' : s < 55 ? '#fbbf24' : s < 75 ? '#fb923c' : '#f87171');
+
+    if (!weeklyChart) {
+      const ctx = document.getElementById('weeklyChart').getContext('2d');
+      weeklyChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ data: scores, backgroundColor: barColors, borderRadius: 4, borderSkipped: false }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false },
+            tooltip: { backgroundColor: '#1a1e28', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+              titleColor: '#6b7280', bodyColor: '#e8eaf0', padding: 10 }},
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 11 } } },
+            y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.04)' },
+                 ticks: { color: '#6b7280', font: { size: 10 }, stepSize: 25 } }
+          }
+        }
+      });
+    } else {
+      weeklyChart.data.labels = labels;
+      weeklyChart.data.datasets[0].data = scores;
+      weeklyChart.data.datasets[0].backgroundColor = barColors;
+      weeklyChart.update();
+    }
+
+    // stats
+    const avg = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
+    const minScore = Math.min(...scores), maxScore = Math.max(...scores);
+    const minDay = labels[scores.indexOf(minScore)], maxDay = labels[scores.indexOf(maxScore)];
+    const recent3 = scores.slice(-3), older3 = scores.slice(0,3);
+    const recentAvg = recent3.reduce((a,b)=>a+b,0)/3;
+    const olderAvg  = older3.reduce((a,b)=>a+b,0)/3;
+    const trending = recentAvg < olderAvg - 5 ? '↘ Improving' : recentAvg > olderAvg + 5 ? '↗ Worsening' : '→ Stable';
+
+    document.getElementById('trendAvg').textContent    = avg;
+    document.getElementById('trendBest').textContent   = minDay;
+    document.getElementById('trendWorst').textContent  = maxDay;
+    document.getElementById('trendDirection').textContent = trending.split(' ')[0];
+    document.getElementById('trendDirectionSub').textContent = trending.split(' ')[1];
+  } catch(e) {}
+}
+
+// ── DISORDER MONITOR ─────────────────────────────────────────────────
+const DISORDERS = [
+  { name:'Stress',     emoji:'😓', key:'stress',     desc:'Allostatic load from HRV + EDA' },
+  { name:'Anxiety',    emoji:'😰', key:'anxiety',    desc:'Autonomic hyperarousal pattern' },
+  { name:'Panic Risk', emoji:'⚡', key:'panic',      desc:'Acute physiological surge marker' },
+  { name:'Insomnia',   emoji:'🌙', key:'insomnia',   desc:'Elevated nighttime arousal index' },
+  { name:'Depression', emoji:'🌧️', key:'depression', desc:'Low HRV + blunted EDA variability' },
+  { name:'Burnout',    emoji:'🔥', key:'burnout',    desc:'Sustained stress load over time' },
+];
+
+function computeDisorderScores(stress, rmssd, hr, eda) {
+  return {
+    stress:     Math.min(100, stress),
+    anxiety:    Math.min(100, stress * 0.6 + Math.max(0, hr - 70) * 0.8),
+    panic:      Math.min(100, Math.max(0, stress - 40) * 1.4 + Math.max(0, hr - 90) * 0.7),
+    insomnia:   Math.min(100, stress * 0.5 + Math.max(0, 60 - rmssd) * 0.6),
+    depression: Math.min(100, Math.max(0, 50 - rmssd) * 1.2 + eda * 0.05),
+    burnout:    Math.min(100, stress * 0.7 + Math.max(0, 65 - rmssd)),
+  };
+}
+
+function updateDisorders(stress, rmssd, hr, eda) {
+  const scores = computeDisorderScores(stress, rmssd, hr, eda);
+  const grid   = document.getElementById('disorderGrid');
+  grid.innerHTML = '';
+  DISORDERS.forEach(d => {
+    const s = Math.round(scores[d.key]);
+    const lbl = s < 35 ? 'low' : s < 55 ? 'moderate' : s < 75 ? 'high' : 'critical';
+    const col = LABEL_COLOR[lbl];
+    grid.innerHTML += `
+      <div class="disorder-card">
+        <div class="disorder-header">
+          <div class="disorder-name">${d.name}</div>
+          <div class="disorder-emoji">${d.emoji}</div>
+        </div>
+        <div style="font-size:0.7rem; color:var(--muted); margin-bottom:10px">${d.desc}</div>
+        <div class="disorder-score-row">
+          <span class="disorder-score" style="color:${col}">${s}</span>
+          <span class="disorder-level" style="color:${col}">${lbl}</span>
+        </div>
+        <div class="disorder-bar-track">
+          <div class="disorder-bar-fill" style="width:${s}%; background:${col}"></div>
+        </div>
+      </div>`;
+  });
+}
+
+// ── CHATBOT ──────────────────────────────────────────────────────────
+function addMessage(role, content) {
+  const wrap = document.getElementById('chatMessages');
+  const time = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  const div  = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.innerHTML = `
+    <div class="msg-avatar">${role === 'bot' ? '🤖' : '👤'}</div>
+    <div>
+      <div class="msg-bubble">${content.replace(/\n/g,'<br>')}</div>
+      <div class="msg-time">${time}</div>
+    </div>`;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function setTyping(show) {
+  document.getElementById('typingIndicator').classList.toggle('show', show);
+  const wrap = document.getElementById('chatMessages');
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+async function sendMessage(text) {
+  const input = document.getElementById('chatInput');
+  const msg   = (text || input.value).trim();
+  if (!msg) return;
+  input.value = '';
+  autoResize(input);
+
+  addMessage('user', msg);
+  chatHistory.push({ role: 'user', content: msg });
+
+  document.getElementById('sendBtn').disabled = true;
+  setTyping(true);
+
+  try {
+    const r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: chatHistory,
+        sensor_context: liveData,
+      })
+    });
+    const data = await r.json();
+    setTyping(false);
+    const reply = data.reply || 'I'm having trouble responding right now. Please try again.';
+    addMessage('bot', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    setTyping(false);
+    addMessage('bot', 'Connection issue — please check the backend is running.');
+  }
+
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function sendQuick(text) { sendMessage(text); }
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function selectMood(btn, emoji, label) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  currentMood = label;
+  sendMessage(`I'm feeling ${label} ${emoji} right now.`);
+}
+
+// Welcome message
+function initChat() {
+  addMessage('bot', "Hello! I'm your Pocket Therapist 🌿\n\nI can see your live sensor data and I'm here to offer support, explain your readings, or guide you through evidence-based coping techniques. What's on your mind?");
+}
+
+// ── BREATHING EXERCISES ──────────────────────────────────────────────
+const EXERCISES = {
+  box: {
+    name: 'Box Breathing',
+    desc: '4-4-4-4 pattern · regulates autonomic nervous system',
+    phases: [
+      { name: 'Inhale',   secs: 4, scale: 1.3 },
+      { name: 'Hold',     secs: 4, scale: 1.3 },
+      { name: 'Exhale',   secs: 4, scale: 0.85 },
+      { name: 'Hold',     secs: 4, scale: 0.85 },
+    ],
+    cycles: 4,
+  },
+  '478': {
+    name: '4-7-8 Breathing',
+    desc: 'Parasympathetic activation · excellent for anxiety',
+    phases: [
+      { name: 'Inhale',  secs: 4, scale: 1.3 },
+      { name: 'Hold',    secs: 7, scale: 1.3 },
+      { name: 'Exhale',  secs: 8, scale: 0.75 },
+    ],
+    cycles: 4,
+  },
+  diaphragm: {
+    name: 'Diaphragmatic Breathing',
+    desc: 'Deep belly breathing · sustained HRV improvement',
+    phases: [
+      { name: 'Inhale slowly', secs: 5, scale: 1.4 },
+      { name: 'Exhale fully',  secs: 6, scale: 0.8 },
+    ],
+    cycles: 6,
+  },
+  '54321': {
+    name: '5-4-3-2-1 Grounding',
+    desc: 'Sensory anchor technique · interrupts anxiety spirals',
+    phases: [
+      { name: '5 things you SEE',   secs: 10, scale: 1 },
+      { name: '4 things you TOUCH', secs: 10, scale: 1 },
+      { name: '3 things you HEAR',  secs: 10, scale: 1 },
+      { name: '2 things you SMELL', secs: 10, scale: 1 },
+      { name: '1 thing you TASTE',  secs: 10, scale: 1 },
+    ],
+    cycles: 1,
+  },
+  pmr: {
+    name: 'Progressive Muscle Relaxation',
+    desc: 'Tense & release muscle groups to reduce tension',
+    phases: [
+      { name: 'Tense hands & fists',    secs: 7, scale: 1.2 },
+      { name: 'Release — feel warmth',   secs: 10, scale: 0.85 },
+      { name: 'Tense shoulders up',      secs: 7, scale: 1.2 },
+      { name: 'Release — drop fully',    secs: 10, scale: 0.85 },
+      { name: 'Tense face — scrunch',    secs: 7, scale: 1.2 },
+      { name: 'Release — smooth brow',   secs: 10, scale: 0.85 },
+      { name: 'Tense legs & feet',       secs: 7, scale: 1.2 },
+      { name: 'Release — heavy warmth',  secs: 10, scale: 0.85 },
+    ],
+    cycles: 2,
+  },
+  sleep: {
+    name: 'Sleep Hygiene Wind-Down',
+    desc: 'CBT-I based protocol — do this 30 min before bed',
+    phases: [
+      { name: 'Dim lights & screens off', secs: 5, scale: 1 },
+      { name: 'Slow breathing — 5 in, 7 out', secs: 12, scale: 1.1 },
+      { name: 'Body scan — feet to head', secs: 15, scale: 1 },
+      { name: 'Gratitude — 3 good things', secs: 15, scale: 1 },
+    ],
+    cycles: 2,
+  },
+};
+
+let exState = { running: false, cycleIdx: 0, phaseIdx: 0, counter: 0, interval: null };
+
+function openExercise(type) {
+  exerciseType = type;
+  const ex = EXERCISES[type];
+  document.getElementById('exTitle').textContent = ex.name;
+  document.getElementById('exDesc').textContent  = ex.desc;
+  document.getElementById('breathPhase').textContent = 'Press Start';
+  document.getElementById('breathCount').textContent = '—';
+  document.getElementById('breathInner').textContent = 'Ready';
+  document.getElementById('breathCircle').style.transform = 'scale(1)';
+  document.getElementById('exStartBtn').textContent = 'Start';
+  document.getElementById('exStartBtn').disabled = false;
+
+  // dots
+  const prog = document.getElementById('exProgress');
+  prog.innerHTML = '';
+  for (let i = 0; i < ex.cycles; i++) prog.innerHTML += '<div class="ex-dot" id="exDot' + i + '"></div>';
+
+  exState = { running: false, cycleIdx: 0, phaseIdx: 0, counter: 0, interval: null };
+  document.getElementById('exerciseModal').classList.add('open');
+}
+
+function closeExercise() {
+  if (exState.interval) clearInterval(exState.interval);
+  document.getElementById('exerciseModal').classList.remove('open');
+}
+
+function startExercise() {
+  if (exState.running) return;
+  exState.running = true;
+  document.getElementById('exStartBtn').disabled = true;
+  const ex = EXERCISES[exerciseType];
+
+  function runPhase() {
+    if (exState.cycleIdx >= ex.cycles) {
+      clearInterval(exState.interval);
+      document.getElementById('breathPhase').textContent = '✓ Complete!';
+      document.getElementById('breathCount').textContent = '';
+      document.getElementById('breathInner').textContent = '✓';
+      document.getElementById('exStartBtn').textContent = 'Done';
+      document.getElementById('exStartBtn').disabled = false;
+      document.getElementById('exStartBtn').onclick = closeExercise;
+      return;
+    }
+    const phase = ex.phases[exState.phaseIdx];
+    exState.counter = phase.secs;
+    document.getElementById('breathPhase').textContent = phase.name;
+    document.getElementById('breathCount').textContent = phase.secs;
+    document.getElementById('breathInner').textContent = phase.name.split(' ')[0];
+    document.getElementById('breathCircle').style.transform = `scale(${phase.scale})`;
+    document.getElementById('breathCircle').style.transition = `transform ${phase.secs}s ease`;
+
+    exState.interval = setInterval(() => {
+      exState.counter--;
+      document.getElementById('breathCount').textContent = Math.max(0, exState.counter);
+      if (exState.counter <= 0) {
+        clearInterval(exState.interval);
+        exState.phaseIdx++;
+        if (exState.phaseIdx >= ex.phases.length) {
+          exState.phaseIdx = 0;
+          document.getElementById('exDot' + exState.cycleIdx).classList.add('done');
+          exState.cycleIdx++;
+        }
+        setTimeout(runPhase, 400);
+      }
+    }, 1000);
+  }
+  runPhase();
+}
+
+// ── CRISIS / SAFETY ──────────────────────────────────────────────────
+function safetyAnswer(q, val, btn) {
+  document.querySelectorAll(`[onclick*="${q}"]`).forEach(b => b.classList.remove('primary'));
+  btn.classList.add('primary');
+  safetyAnswers[q] = val;
+
+  if (Object.keys(safetyAnswers).length >= 2) {
+    const resultDiv = document.getElementById('safetyResult');
+    resultDiv.style.display = 'block';
+    const { q1, q2 } = safetyAnswers;
+    if (q2 === 'unsafe' || q1 === 'crisis') {
+      resultDiv.innerHTML = `<strong style="color:var(--danger)">⚠️ Please reach out now.</strong><br>
+        UAE Mental Health Helpline: <a href="tel:8004673" style="color:var(--accent)">800 4673</a> (24/7, free)<br>
+        Lifeline ME: <a href="tel:+97145219999" style="color:var(--accent)">+971 4 521 9999</a>`;
+    } else if (q2 === 'unsure' || q1 === 'overwhelmed') {
+      resultDiv.innerHTML = `<strong style="color:var(--warn)">It's okay to reach out even when unsure.</strong><br>
+        Speaking to a counsellor can help clarify your feelings. UAE Helpline: 
+        <a href="tel:8004673" style="color:var(--accent)">800 4673</a>`;
+    } else {
+      resultDiv.innerHTML = `<strong style="color:var(--low)">Glad you're feeling safe.</strong><br>
+        The AI Therapist and Coping Tools are here whenever you need support.`;
+    }
+  }
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────
+function init() {
+  initChat();
+  fetchLive();
+  fetchHistory();
+  fetchStatus();
+  setInterval(fetchLive,    2000);
+  setInterval(fetchHistory, 5000);
+  setInterval(fetchStatus, 15000);
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
